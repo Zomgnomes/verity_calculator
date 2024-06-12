@@ -1,8 +1,10 @@
 # Verity Calculator
 A Calculator for the Verity encounter of Destiny 2's Salvation's Edge Raid
 
+[Available to try on GitHub Pages](https://zomgnomes.github.io/verity_calculator/)
+
 ## Directions
-Download the html file and open it in the web-browser of your choice.
+Load up the GitHub Pages link, or download the index.html file and open it locally on your computer.
 Enter the data it asks for and it will fill in the output section for you.
 
 The output will tell you what shape:
