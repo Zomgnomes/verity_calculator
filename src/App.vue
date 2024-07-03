@@ -36,7 +36,7 @@ import { RouterLink, RouterView } from 'vue-router'
       class="text-gray-600 bg-gray-200 dark:bg-gray-800 dark:text-gray-300 rounded-b-lg"
     />
     <footer class="w-full flex justify-center">
-      <a href="/legacy.html">Legacy Version</a>
+      <a href="/verity_calculator/legacy.html">Legacy Version</a>
     </footer>
   </div>
 </template>
