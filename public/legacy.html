@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Verity Calculator</title>
+    <style>
+      body {
+        display: grid;
+        place-items: center;
+      }
+      .main {
+        width: 80%;
+        height: 80%;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        justify-content: space-between;
+      }
+      .inside, .outside, .output {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .content {
+        display: flex;
+        flex: 1;
+        justify-content: space-between;
+      }
+      .content > section {
+        display: flex;
+        flex-direction: column;
+      }
+      .output {
+        display: flex;
+        flex: 1;
+      }
+    </style>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+  </head>
+  <body>
+  <script type="text/javascript">
+  // wait for the dom to load
+  document.addEventListener("DOMContentLoaded", function() {  
+    // declare the values we need to track
+    let left_inside, middle_inside, right_inside;
+    const inside_error_el = document.getElementById("inside_error");
+    let left_outside, middle_outside, right_outside;
+    const outside_error_el = document.getElementById("outside_error");
+
+    const display2d = function(shape) {
+      if (shape == "C") {
+        return "Circle (C)";
+      }
+      if (shape == "S") {
+        return "Square (S)";
+      }
+      if (shape == "T") {
+        return "Triangle (T)";
+      }
+      return "Unknown Shape";
+    }
+
+    // setup our validation handlers
+    const validateInside = function() {
+      let err_msg = "";
+      if (middle_inside == left_inside && right_inside == left_inside) {
+        if (typeof left_inside != "undefined") {
+          err_msg = `Can't have three ${display2d(left_inside)}`;
+        }
+      }
+      else if (middle_inside == left_inside || right_inside == left_inside) {
+        if (typeof left_inside != "undefined") {
+          err_msg = `Can't have two ${display2d(left_inside)}`;
+        }
+      }
+      else if (middle_inside == right_inside) {
+        if (typeof middle_inside != "undefined") {
+          err_msg = `Can't have two ${display2d(middle_inside)}`;
+        }
+      }
+      inside_error_el.textContent = err_msg;
+
+      if (
+        err_msg !== "" ||
+        typeof left_inside == "undefined" ||
+        typeof middle_inside == "undefined" ||
+        typeof right_inside == "undefined"
+      ) {
+        return false;
+      }
+      return true;
+    };
+
+    const validateOutside = function() {
+      let all = "";
+      if (typeof left_outside != "undefined") {
+        all += left_outside;
+      }
+      if (typeof middle_outside != "undefined") {
+        all += middle_outside;
+      }
+      if (typeof right_outside != "undefined") {
+        all += right_outside;
+      }
+
+      // count the parts
+      let c_count = (all.match(/C/g)||[]).length;
+      let s_count = (all.match(/S/g)||[]).length;
+      let t_count = (all.match(/T/g)||[]).length;
+
+      let err_msg = [];
+      // wait until they select stuff to run validation
+      if (all.length == 6){
+        // check for the right number of Cs
+        if (c_count !== 2) {
+          if (c_count > 2) {
+            err_msg.push(`${c_count - 2} extra ${display2d('C')}`);
+          } else {
+            err_msg.push(`short ${2 - c_count} ${display2d('C')}`);
+          }
+        }
+        // check for the right number of Ss
+        if (s_count !== 2) {
+          if (s_count > 2) {
+            err_msg.push(`${s_count - 2} extra ${display2d('S')}`);
+          } else {
+            err_msg.push(`short ${2 - s_count} ${display2d('S')}`);
+          }
+        }
+        // check for the right number ot Ts
+        if (t_count !== 2) {
+          if (t_count > 2) {
+            err_msg.push(`${t_count - 2} extra ${display2d('T')}`);
+          } else {
+            err_msg.push(`short ${2 - t_count} ${display2d('T')}`);
+          }
+        }
+        outside_error_el.textContent = err_msg.join(", ");
+      }
+      if (err_msg.length == 0 && all.length == 6) {
+          return true;
+      }
+      return false;
+    };
+
+    const findGoal = function(shape2d) {
+        return 'CST'.replace(shape2d, '');
+    }
+
+    const findWrongParts = function(shape3d, goalShape) {
+      let wrongParts = shape3d;
+      for (let shapePart of goalShape) {
+        wrongParts = wrongParts.replace(shapePart, '');
+      }
+      return wrongParts;
+    };
+
+    const generateOutput = function(p1, l1, p2, l2, p3, l3, p4, l4, p5, l5, p6, l6) {
+      let wave_1 = "";
+      if (typeof p3 !== "undefined") {
+        wave_1 = `${p1}${l1} - ${p2}${l2} - ${p3}${l3}`;
+      } else if (typeof p2 !== "undefined"){
+        wave_1 = `${p1}${l1} - ${p2}${l2}`;
+      } else {
+        wave_1 = "Do nothing it's already solved";
+      }
+
+      let wave_2 = "";
+      if (typeof p6 !== "undefined") {
+        wave_2 = `${p4}${l4} - ${p5}${l5} - ${p6}${l6}`;
+      } else if (typeof p5 !== "undefined") {
+        wave_2 = `${p4}${l4} - ${p5}${l5}`;
+      } else if (typeof p4 !== "undefined") {
+        wave_2 = `${p4}${l4}`;
+      }
+
+      console.log(`W1: ${wave_1}`);
+      console.log(`W2: ${wave_2}`);
+
+      document.getElementById("wave1").setAttribute('value', wave_1);
+      document.getElementById("wave2").setAttribute('value', wave_2);
+    }
+
+    const processData = function() {
+      let left_goal = findGoal(left_inside);
+      let middle_goal = findGoal(middle_inside);
+      let right_goal = findGoal(right_inside);
+
+
+      let left_has = left_outside;
+      let middle_has = middle_outside;
+      let right_has = right_outside;
+
+      let left_wrong_parts = findWrongParts(left_has, left_goal);
+      let middle_wrong_parts = findWrongParts(middle_has, middle_goal);
+      let right_wrong_parts = findWrongParts(right_has, right_goal);
+
+      let shape_1, shape_2, shape_3, shape_4, shape_5, shape_6;
+      let loc_1, loc_2, loc_3, loc_4, loc_5, loc_6;
+
+      
+      console.log("initial")
+      console.log(`left_has: ${left_has} left_goal: ${left_goal} left_wrong_parts: ${left_wrong_parts}`);
+      console.log(`middle_has: ${middle_has} middle_goal: ${middle_goal} middle_wrong_parts: ${middle_wrong_parts}`);
+      console.log(`right_has: ${right_has} right_goal: ${right_goal} right_wrong_parts: ${right_wrong_parts}`);
+
+      if(
+        left_wrong_parts.length !== 0 ||
+        middle_wrong_parts.length !== 0 ||
+        right_wrong_parts.length !== 0
+      ){
+        // figure out the first dunks
+        if (middle_wrong_parts.length === 2) {
+          shape_1 = middle_wrong_parts.slice(0,1);
+          loc_1 = 'M';
+        }
+        else if (right_wrong_parts.length === 2) {
+          shape_1 = right_wrong_parts.slice(0,1);
+          loc_1 = 'R';
+        } else if (left_wrong_parts.length > 0){
+          shape_1 = left_wrong_parts.slice(0,1);
+          loc_1 = 'L';
+        } else {
+          shape_1 = middle_wrong_parts.slice(0,1);
+          loc_1 = 'M';
+        }
+
+        console.log(`after step 1 - chose ${shape_1}${loc_1}`)
+        console.log(`left_has: ${left_has} left_goal: ${left_goal} left_wrong_parts: ${left_wrong_parts}`);
+        console.log(`middle_has: ${middle_has} middle_goal: ${middle_goal} middle_wrong_parts: ${middle_wrong_parts}`);
+        console.log(`right_has: ${right_has} right_goal: ${right_goal} right_wrong_parts: ${right_wrong_parts}`);
+        
+        if(
+          loc_1 !== 'L' &&
+          left_goal.includes(shape_1) && 
+          !left_has.includes(shape_1)
+        ){
+          shape_2 = left_wrong_parts.slice(0,1);
+          loc_2 = 'L';
+          left_has = left_has.replace(shape_2, shape_1).split("").sort().join("");
+        } else if (
+          loc_1 !== 'M' &&
+          middle_goal.includes(shape_1) && 
+          !middle_has.includes(shape_1)
+        ) {
+          shape_2 = middle_wrong_parts.slice(0,1);
+          loc_2 = 'M';
+          middle_has = middle_has.replace(shape_2, shape_1).split("").sort().join("");
+        } else {
+          shape_2 = right_wrong_parts.slice(0,1);
+          loc_2 = 'R';
+          right_has = right_has.replace(shape_2, shape_1).split("").sort().join("");
+        }
+
+        if (loc_1 === "L"){
+          left_has = left_has.replace(shape_1, shape_2).split("").sort().join("");
+        } else if (loc_1 === "M"){
+          middle_has = middle_has.replace(shape_1, shape_2).split("").sort().join("");
+        } else {
+          right_has = right_has.replace(shape_1, shape_2).split("").sort().join("");
+        }
+        
+        left_wrong_parts = findWrongParts(left_has, left_goal);
+        middle_wrong_parts = findWrongParts(middle_has, middle_goal);
+        right_wrong_parts = findWrongParts(right_has, right_goal);
+
+        console.log(`after step 2 - chose ${shape_2}${loc_2}`)
+        console.log(`left_has: ${left_has} left_goal: ${left_goal} left_wrong_parts: ${left_wrong_parts}`);
+        console.log(`middle_has: ${middle_has} middle_goal: ${middle_goal} middle_wrong_parts: ${middle_wrong_parts}`);
+        console.log(`right_has: ${right_has} right_goal: ${right_goal} right_wrong_parts: ${right_wrong_parts}`);
+      }
+
+
+
+      if(
+        left_wrong_parts.length !== 0 ||
+        middle_wrong_parts.length !== 0 ||
+        right_wrong_parts.length !== 0
+      ){
+        loc_3 = "LMR".replace(loc_1, '').replace(loc_2, '');
+        if (loc_3 == 'L' && left_wrong_parts.length > 0) {
+          shape_3 = left_wrong_parts.slice(0,1);
+        } else if (loc_3 == 'M' && middle_wrong_parts.length > 0) {
+          shape_3 = middle_wrong_parts.slice(0,1);
+        } else if (loc_3 == 'R' && right_wrong_parts.length > 0) {
+          shape_3 = right_wrong_parts.slice(0,1);
+        }
+        
+        console.log(`after step 3 - chose ${shape_3}${loc_3}`)
+        console.log(`left_has: ${left_has} left_goal: ${left_goal} left_wrong_parts: ${left_wrong_parts}`);
+        console.log(`middle_has: ${middle_has} middle_goal: ${middle_goal} middle_wrong_parts: ${middle_wrong_parts}`);
+        console.log(`right_has: ${right_has} right_goal: ${right_goal} right_wrong_parts: ${right_wrong_parts}`);
+
+        if (loc_3 === "L") {
+          if(
+            middle_wrong_parts.length &&
+            middle_goal.includes(shape_3) && 
+            !middle_has.includes(shape_3)
+          ) {
+            shape_4 = middle_wrong_parts.slice(0,1);
+            loc_4 = "M";
+            middle_wrong_parts = middle_wrong_parts.replace(shape_4, '');
+            middle_has = middle_has.replace(shape_4, shape_3).split("").sort().join("");
+          } else {
+            shape_4 = right_wrong_parts.slice(0,1);
+            loc_4 = "R";
+            right_wrong_parts = right_wrong_parts.replace(shape_4, '');
+            right_has = right_has.replace(shape_4, shape_3).split("").sort().join("");
+          }
+        } else if (loc_3 === "M") {
+          if(
+            left_wrong_parts.length &&
+            left_goal.includes(shape_3) && 
+            !left_has.includes(shape_3)
+          ) {
+            shape_4 = left_wrong_parts.slice(0,1);
+            loc_4 = "L";
+            left_wrong_parts = left_wrong_parts.replace(shape_4, '');
+            left_has = left_has.replace(shape_4, shape_3).split("").sort().join("");
+          } else {
+            shape_4 = right_wrong_parts.slice(0,1);
+            loc_4 = "R";
+            right_wrong_parts = right_wrong_parts.replace(shape_4, '');
+            right_has = right_has.replace(shape_4, shape_3).split("").sort().join("");
+          }
+        } else {
+          if(
+            left_wrong_parts.length &&
+            left_goal.includes(shape_3) && 
+            !left_has.includes(shape_3)
+          ) {
+            shape_4 = left_wrong_parts.slice(0,1);
+            loc_4 = "L";
+            left_wrong_parts = left_wrong_parts.replace(shape_4, '');
+            left_has = left_has.replace(shape_4, shape_3).split("").sort().join("");
+          } else {
+            shape_4 = middle_wrong_parts.slice(0,1);
+            loc_4 = "M";
+            middle_wrong_parts = middle_wrong_parts.replace(shape_4, '');
+            middle_has = middle_has.replace(shape_4, shape_3).split("").sort().join("");
+          }
+        }
+
+        if (loc_3 === "L"){
+          left_has = left_has.replace(shape_3, shape_4).split("").sort().join("");
+        } else if (loc_3 === "M"){
+          middle_has = middle_has.replace(shape_3, shape_4).split("").sort().join("");
+        } else {
+          right_has = right_has.replace(shape_3, shape_4).split("").sort().join("");
+        }
+        
+        left_wrong_parts = findWrongParts(left_has, left_goal);
+        middle_wrong_parts = findWrongParts(middle_has, middle_goal);
+        right_wrong_parts = findWrongParts(right_has, right_goal);
+        
+        console.log(`after step 4 - chose ${shape_4}${loc_4}`)
+        console.log(`left_has: ${left_has} left_goal: ${left_goal} left_wrong_parts: ${left_wrong_parts}`);
+        console.log(`middle_has: ${middle_has} middle_goal: ${middle_goal} middle_wrong_parts: ${middle_wrong_parts}`);
+        console.log(`right_has: ${right_has} right_goal: ${right_goal} right_wrong_parts: ${right_wrong_parts}`);
+      }
+
+      if( left_wrong_parts.length + middle_wrong_parts.length > 0){
+        // do a final swap
+        if (left_wrong_parts.length > 0){
+          if (middle_wrong_parts.length > 0){
+            //swap left and mid
+            shape_5 = left_wrong_parts.slice(0,1);
+            loc_5 = "L";
+            shape_6 = middle_wrong_parts.slice(0,1);
+            loc_6 = "M";
+            left_has = left_has.replace(shape_6, shape_5).split("").sort().join("");
+            middle_has = middle_has.replace(shape_5, shape_6).split("").sort().join("");
+          } else {
+            // swap left and right
+            shape_5 = left_wrong_parts.slice(0,1);
+            loc_5 = "L";
+            shape_6 = right_wrong_parts.slice(0,1);
+            loc_6 = "R";
+            left_has = left_has.replace(shape_6, shape_5).split("").sort().join("");
+            right_has = right_has.replace(shape_5, shape_6).split("").sort().join("");
+          }
+        } else {
+          // swap mid and right
+          shape_5 = middle_wrong_parts.slice(0,1);
+          loc_5 = "M";
+          shape_6 = right_wrong_parts.slice(0,1);
+          loc_6 = "R";
+          middle_has = middle_has.replace(shape_6, shape_5).split("").sort().join("");
+          right_has = right_has.replace(shape_5, shape_6).split("").sort().join("");
+        }
+        
+        left_wrong_parts = findWrongParts(left_has, left_goal);
+        middle_wrong_parts = findWrongParts(middle_has, middle_goal);
+        right_wrong_parts = findWrongParts(right_has, right_goal);
+
+        console.log(`after step 5/6 - chose ${shape_5}${loc_5} and ${shape_6}${loc_6}`);
+        console.log(`left_has: ${left_has} left_goal: ${left_goal} left_wrong_parts: ${left_wrong_parts}`);
+        console.log(`middle_has: ${middle_has} middle_goal: ${middle_goal} middle_wrong_parts: ${middle_wrong_parts}`);
+        console.log(`right_has: ${right_has} right_goal: ${right_goal} right_wrong_parts: ${right_wrong_parts}`);
+      }
+
+      generateOutput(shape_1, loc_1, shape_2, loc_2, shape_3, loc_3, shape_4, loc_4, shape_5, loc_5, shape_6, loc_6);
+      
+    }
+
+    // setup our event listeners
+    let left_inside_radios = document.getElementsByName("left_inside");
+    for(radio in left_inside_radios) {
+      // reset the values to unchecked
+      left_inside_radios[radio].checked = false;
+      // add the event handler
+      left_inside_radios[radio].onclick = function() {
+        left_inside = this.value;
+        if (validateInside() && validateOutside()){
+          processData();
+        }
+      }
+    }
+
+    let middle_inside_radios = document.getElementsByName("middle_inside");
+    for(radio in middle_inside_radios) {
+      // reset the values to unchecked
+      middle_inside_radios[radio].checked = false;
+      // add the event handler
+      middle_inside_radios[radio].onclick = function() {
+        middle_inside = this.value;
+        if (validateInside() && validateOutside()){
+          processData();
+        }
+      }
+    }
+
+    let right_inside_radios = document.getElementsByName("right_inside");
+    for(radio in right_inside_radios) {
+      // reset the values to unchecked
+      right_inside_radios[radio].checked = false;
+      // add the event handler
+      right_inside_radios[radio].onclick = function() {
+        right_inside = this.value;
+        if (validateInside() && validateOutside()){
+          processData();
+        }
+      }
+    }
+
+    let left_outside_radios = document.getElementsByName("left_outside");
+    for(radio in left_outside_radios) {
+      // reset the values to unchecked
+      left_outside_radios[radio].checked = false;
+      // add the event handler
+      left_outside_radios[radio].onclick = function() {
+        left_outside = this.value;
+        if (validateInside() && validateOutside()){
+          processData();
+        }
+      }
+    }
+
+    let middle_outside_radios = document.getElementsByName("middle_outside");
+    for(radio in middle_outside_radios) {
+      // reset the values to unchecked
+      middle_outside_radios[radio].checked = false;
+      // add the event handler
+      middle_outside_radios[radio].onclick = function() {
+        middle_outside = this.value;
+        if (validateInside() && validateOutside()){
+          processData();
+        }
+      }
+    }
+
+    let right_outside_radios = document.getElementsByName("right_outside");
+    for(radio in right_outside_radios) {
+      // reset the values to unchecked
+      right_outside_radios[radio].checked = false;
+      // add the event handler
+      right_outside_radios[radio].onclick = function() {
+        right_outside = this.value;
+        if (validateInside() && validateOutside()){
+          processData();
+        }
+      }
+    }
+  });
+
+  const copyWave1 = function() {
+    navigator.clipboard.writeText(document.getElementById("wave1").value);
+  }
+
+  const copyWave2 = function() {
+    navigator.clipboard.writeText(document.getElementById("wave2").value);
+  }
+
+  const resetEverything = function() {
+    let radios = document.querySelectorAll('input[type="radio"]');
+    for(radio in radios){
+      radios[radio].checked = false;
+    }
+    document.getElementById("wave1").setAttribute('value', '');
+    document.getElementById("wave2").setAttribute('value', '');
+
+  }
+
+  </script>
+  <form class="main" name="main">
+  <div class="inside">
+    <div>
+      <h2>Inside:</h2>
+      <span id="inside_error"></span>
+    </div>
+    <div class="content">
+      <section>
+        <h3>Left Guardian is holding:</h3>
+        <span>
+          <input type="radio" id="left_inside_circle" name="left_inside" value="C">
+          <label for="left_inside_circle">Circle (C)</label>
+        </span>
+        <span>
+          <input type="radio" id="left_inside_square" name="left_inside" value="S">
+          <label for="left_inside_square">Square (S)</label>
+        </span>
+        <span>
+          <input type="radio" id="left_inside_triangle" name="left_inside" value="T">
+          <label for="left_inside_triangle">Triangle (T)</label>
+        </span>
+      </section>
+      <section>
+        <h3>Middle Guardian is holding:</h3>
+        <span>
+          <input type="radio" id="middle_inside_circle" name="middle_inside" value="C">
+          <label for="middle_inside_circle">Circle (C)</label>
+        </span>
+        <span>
+          <input type="radio" id="middle_inside_square" name="middle_inside" value="S">
+          <label for="middle_inside_square">Square (S)</label>
+        </span>
+        <span>
+          <input type="radio" id="middle_inside_triangle" name="middle_inside" value="T">
+          <label for="middle_inside_triangle">Triangle (T)</label>
+        </span>
+      </section>
+      <section>
+        <h3>Right Guardian is holding:</h3>
+        <span>
+          <input type="radio" id="right_inside_circle" name="right_inside" value="C">
+          <label for="right_inside_circle">Circle (C)</label>
+        </span>
+        <span>
+          <input type="radio" id="right_inside_square" name="right_inside" value="S">
+          <label for="right_inside_square">Square (S)</label>
+        </span>
+        <span>
+          <input type="radio" id="right_inside_triangle" name="right_inside" value="T">
+          <label for="right_inside_triangle">Triangle (T)</label>
+        </span>
+      </section>
+    </div>
+  </div>
+  <div class="outside">
+    <div>
+      <h2>Outside:</h2>
+      <span id="outside_error"></span>
+    </div>
+    <div class="content">
+      <section>
+        <h3>Left Guardian is holding:</h3>
+        <span>
+          <input type="radio" id="left_outside_cc" name="left_outside" value="CC">
+          <label for="left_outside_cc">Sphere (CC)</label>
+        </span>
+        <span>
+          <input type="radio" id="left_outside_cs" name="left_outside" value="CS">
+          <label for="left_outside_cs">Cylinder (CS)</label>
+        </span>
+        <span>
+          <input type="radio" id="left_outside_ct" name="left_outside" value="CT">
+          <label for="left_outside_ct">Cone (CT)</label>
+        </span>
+        <span>
+          <input type="radio" id="left_outside_ss" name="left_outside" value="SS">
+          <label for="left_outside_ss">Cube (SS)</label>
+        </span>
+        <span>
+          <input type="radio" id="left_outside_st" name="left_outside" value="ST">
+          <label for="left_outside_st">Prism (ST)</label>
+        </span>
+        <span>
+          <input type="radio" id="left_outside_tt" name="left_outside" value="TT">
+          <label for="left_outside_tt">Pyramid (TT)</label>
+        </span>
+      </section>
+      <section>
+        <h3>Middle Guardian is holding:</h3>
+        <span>
+          <input type="radio" id="middle_outside_cc" name="middle_outside" value="CC">
+          <label for="middle_outside_cc">Sphere (CC)</label>
+        </span>
+        <span>
+          <input type="radio" id="middle_outside_cs" name="middle_outside" value="CS">
+          <label for="middle_outside_cs">Cylinder (CS)</label>
+        </span>
+        <span>
+          <input type="radio" id="middle_outside_ct" name="middle_outside" value="CT">
+          <label for="middle_outside_ct">Cone (CT)</label>
+        </span>
+        <span>
+          <input type="radio" id="middle_outside_ss" name="middle_outside" value="SS">
+          <label for="middle_outside_ss">Cube (SS)</label>
+        </span>
+        <span>
+          <input type="radio" id="middle_outside_st" name="middle_outside" value="ST">
+          <label for="middle_outside_st">Prism (ST)</label>
+        </span>
+        <span>
+          <input type="radio" id="middle_outside_tt" name="middle_outside" value="TT">
+          <label for="middle_outside_tt">Pyramid (TT)</label>
+        </span>
+      </section>
+      <section>
+        <h3>Right Guardian is holding:</h3>
+        <span>
+          <input type="radio" id="right_outside_cc" name="right_outside" value="CC">
+          <label for="right_outside_cc">Sphere (CC)</label>
+        </span>
+        <span>
+          <input type="radio" id="right_outside_cs" name="right_outside" value="CS">
+          <label for="right_outside_cs">Cylinder (CS)</label>
+        </span>
+        <span>
+          <input type="radio" id="right_outside_ct" name="right_outside" value="CT">
+          <label for="right_outside_ct">Cone (CT)</label>
+        </span>
+        <span>
+          <input type="radio" id="right_outside_ss" name="right_outside" value="SS">
+          <label for="right_outside_ss">Cube (SS)</label>
+        </span>
+        <span>
+          <input type="radio" id="right_outside_st" name="right_outside" value="ST">
+          <label for="right_outside_st">Prism (ST)</label>
+        </span>
+        <span>
+          <input type="radio" id="right_outside_tt" name="right_outside" value="TT">
+          <label for="right_outside_tt">Pyramid (TT)</label>
+        </span>
+      </section>
+    </div>
+  </div>
+  <div class="output">
+    <h2>Output:</h2>
+    <div class="output">
+      <ol>
+        <li><input type="text" id="wave1" /><button type="button" id="wave_1_copy" onClick="copyWave1()">Copy</button></li>
+        <li><input type="text" id="wave2" /><button type="button" id="wave_2_copy" onClick="copyWave2()">Copy</button></li>
+      </ol>
+      <button type="button" id="reset" onClick="resetEverything()">Reset</button>
+    </div>
+  </div>
+  </form>
+  </body>
+</html>
